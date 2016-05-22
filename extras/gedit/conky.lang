@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<language id="conkyrc" _name="Conky" version="2.0" _section="Others"> 
+<language id="conkyrc" _name="Conky" version="2.0" _section="Others">
  <metadata>
-    <!-- This syntax highlighting will apply for any file with the sequence "conky" 
-         in the file name (or extension), I recommend to use you_config_name.conky 
+    <!-- This syntax highlighting will apply for any file with the sequence "conky"
+         in the file name (or extension), I recommend to use you_config_name.conky
          for config files or alternatively conky_your_config_name
-         Unfortunately this will also trigger the syntax highlighting for this document, 
+         Unfortunately this will also trigger the syntax highlighting for this document,
          you can always manually set this one back to XML.
          If you have a favourite custom format you can change the globs property to your
          personal preference. -->
@@ -41,16 +41,22 @@
           <start>conky\.config\s*=\s*\{</start>
           <end>\}</end>
           <include>
-            <context ref="genericContainer:*"/>
             <context ref="keywordsConfig"/>
-          	<context ref="argumentsConfig"/>
+            <context ref="argumentsConfig"/>
             <context ref="config-block-comment"/>
             <context ref="config-line-comment"/>
-            <context ref="template"/>
             <context ref="argumentsWindowType"/>
             <context ref="argumentsWindowHints"/>
             <context ref="argumentsAlignment"/>
-          	<context ref="number"/>
+            <context ref="template"/>
+            <context ref="number"/>
+             <context ref="path"/>
+            <context ref="colors"/>
+            <context ref="string"/>
+            <context ref="fonts"/>
+            <context ref="date"/>
+            <context ref="boolean"/>
+            <context ref="predefinedColors"/>
           </include>
         </context>
         <!-- end: settings block -->
@@ -60,41 +66,35 @@
           <start>conky\.text\s*=\s*\[\[</start>
           <end>\]\]</end>
           <include>
-            <context ref="genericContainer:*"/>
-            
+            <!-- Text Variable brackets highlighter -->
+            <!-- Highlights unescaped `$`, `${` and `}` within `conky.text` -->
+            <context style-ref="brackets" extend-parent="false">
+              <match>(((?&lt;!\\)(\$\{|\}|\$(?!\{)(?=[a-z]))))</match>
+            </context>
+            <!-- end: Text Variable brackets -->
+
             <!-- TextVariables -->
+            <!-- These select the text variable's content (e.g. `$content` or `${content and more content}`) -->
+            <!-- You could style generic variable text by adding a `style-ref` here -->
+
             <!-- Bracket style -->
-            <context id="text-bracket-variable" style-ref="brackets" extend-parent="false">
-              <start>((?&lt;!\\)\$\{)</start>
-              <end>((?&lt;!\\)\})</end>
+            <context extend-parent="false">
+              <start>(?&lt;=(?&lt;!\\)\$\{)</start>
+              <end>(?=(?&lt;!\\)\})</end>
               <include>
-                <!-- bracket highlight --><!-- TODO: Need to find a better style (if argument is only intended for known args) -->
-                <context style-ref="argument" extend-parent="false">
-                  <start>((?&lt;=(?&lt;!\\)\$\{))</start>
-                  <end>(?&gt;=\})</end>
-                  <include>
-                    <context ref="keywordsText"/>
-                    <context ref="argumentsNvidia"/>
-                    <context ref="argumentsText"/>
-                    <context ref="number"/>
-                  </include>
-                </context>
-                <!-- end: bracket highlight -->
+                <context ref="keywordsText"/>
+                <context ref="argumentsNvidia"/>
+                <context ref="argumentsText"/>
+                <context ref="number"/>
               </include>
             </context>
+
             <!-- non-bracket style -->
-            <context id="text-short-variable" style-ref="brackets" extend-parent="false">
-              <start>((?&lt;!\\)\$)</start>
+            <context extend-parent="false">
+              <start>((?&lt;=(?&lt;!\\)\$)(?!\{))</start>
               <end>(\s|$)</end>
               <include>
-                <!-- bracket highlight --><!-- TODO: Need to find a better style (if argument is only intended for known args) -->
-                <context style-ref="argument" extend-parent="false">
-                  <start>((?&lt;=(?&lt;!\\)\$))</start>
-                  <include>
-                     <context ref="keywordsText"/>
-                  </include>
-                </context>
-                <!-- end: bracket highlight -->
+                 <context ref="keywordsText"/>
               </include>
             </context>
             <!-- end: TextVariables -->
@@ -105,26 +105,16 @@
     </context>
     <!-- end: root context -->
 
-    
+
     <!-- ================================== Import groups ================================== -->
     <!-- Container for generic includes -->
-    <context id="genericContainer">
+    <!--<context id="genericContainer">
       <include>
-        <!--<context ref="brackets"/>--> <!-- Commented out as it conflicts with the above implementation -->
- 	      <context ref="path"/>
-        <context ref="colors"/>
-    <context ref="string"/>
-        <context ref="fonts"/>
-        <context ref="date"/>
-    <context ref="number"/>
-    <context ref="boolean"/>
-        <context ref="predefinedColors"/>
-    <context ref="argumentsConfig"/>
       </include>
-    </context>
+    </context>-->
     <!-- end: Generic container -->
 
-    
+
     <!-- ======================== Component contexts and structure ========================= -->
     <!-- Block comment, lua syntax -->
     <context id="config-block-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
@@ -150,13 +140,7 @@
     </context>
     <!-- end: File paths and URLs -->
 
-    <!-- Brackets --> 
-    <!-- Note: this will just highlight all brackets, not just those from the conky syntax -->
-    <context id="brackets" style-ref="brackets">
-      <match>(\$\{|(?&lt;!\\)(\{|\})|\[\[|\]\])</match>
-    </context>
-
-    <!-- String --> 
+    <!-- String -->
     <context id="string" end-at-line-end="true" style-ref="path">
     <start>"</start>
     <end>"</end>
@@ -197,7 +181,7 @@
     <!-- end: Template arguments -->
 
     <!-- Numbers -->
-    <context id="number" style-ref="decimal">
+    <context id="number" style-ref="decimal" extend-parent="false">
       <match>(?&lt;=[\ \=]|\dx)([\+\-]{0,1}\d+)([\.\,]{1}\d+)?</match>
     </context>
     <!-- end: Numbers -->
@@ -827,7 +811,7 @@
     <keyword>memused</keyword>
     <keyword>memtotal</keyword>
     <keyword>gpuutil</keyword>
-    <keyword>membwutil</keyword>    
+    <keyword>membwutil</keyword>
     <keyword>videoutil</keyword>
     <keyword>pcieutil</keyword>
     <keyword>gputemp</keyword>

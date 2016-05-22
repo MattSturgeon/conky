@@ -14,64 +14,141 @@
   </metadata>
 
   <styles>
-    <style id="keyword" _name="Config keywords"     map-to="def:keyword"/>
-    <style id="attribute"   _name="Text keywords"       map-to="def:type"/>
+    <style id="configKeyword" _name="Config keywords"     map-to="def:keyword"/>
+    <style id="textKeyword"   _name="Text keywords"       map-to="def:type"/>
     <style id="comment" _name="Comment"         map-to="def:comment"/>
     <style id="path"    _name="Paths and URLs"      map-to="def:string"/>
     <style id="boolean" _name="Boolean"         map-to="def:boolean"/>
     <style id="argument"    _name="Arguments"       map-to="def:preprocessor"/>
-    <style id="brackets"    _name="Brackets ${ ... }"   map-to="def:identifier"/>
+    <style id="brackets"    _name="Text Variable Brackets ${ ... }"   map-to="def:identifier"/>
     <style id="decimal" _name="Decimal"         map-to="def:decimal"/>
   </styles>
 
   <definitions>
-   <context id="conkyrc" class="no-spell-check">
-      <include>
-        <context ref="block-comment"/>
-        <context ref="line-comment"/>
-    <context ref="path"/>
-        <context ref="brackets"/>
-        <context ref="colors"/>
-    <context ref="string"/>
-        <context ref="fonts"/>
-        <context ref="template"/>
-        <context ref="date"/>
-    <context ref="number"/>
-        <context ref="keywordsConfig"/>
-    <context ref="keywordsText"/>
-    <context ref="boolean"/>
-        <context ref="predefinedColors"/>
-    <context ref="argumentsWindowType"/>
-    <context ref="argumentsWindowHints"/>
-    <context ref="argumentsAlignment"/>
-    <context ref="argumentsNvidia"/>
-    <context ref="argumentsText"/>
-    <context ref="argumentsConfig"/>
-      </include>
-    </context>
 
 <!-- ======================================================================================= -->
 <!-- Keep in mind gedit does not like < and >, use &lt; and &gt; instead! -->
+<!-- Use  `extend-parent="false"` to prevent a context bleeding out of it's parent context -->
+<!-- Use `ref="id:*"` to include all children of `id` instead of `id` itself -->
 
+
+<!-- ========================== Container contexts and structure =========================== -->
+   <!-- "root structure" this is where it all begins -->
+   <context id="conkyrc" class="no-spell-check">
+      <include>
+        <!-- The settings block -->
+        <context>
+          <start>conky\.config\s*=\s*\{</start>
+          <end>\}</end>
+          <include>
+            <context ref="genericContainer:*"/>
+            <context ref="keywordsConfig"/>
+          	<context ref="argumentsConfig"/>
+            <context ref="config-block-comment"/>
+            <context ref="config-line-comment"/>
+            <context ref="template"/>
+            <context ref="argumentsWindowType"/>
+            <context ref="argumentsWindowHints"/>
+            <context ref="argumentsAlignment"/>
+          	<context ref="number"/>
+          </include>
+        </context>
+        <!-- end: settings block -->
+
+        <!-- The text block -->
+        <context>
+          <start>conky\.text\s*=\s*\[\[</start>
+          <end>\]\]</end>
+          <include>
+            <context ref="genericContainer:*"/>
+            
+            <!-- TextVariables -->
+            <!-- Bracket style -->
+            <context id="text-bracket-variable" style-ref="brackets" extend-parent="false">
+              <start>((?&lt;!\\)\$\{)</start>
+              <end>((?&lt;!\\)\})</end>
+              <include>
+                <!-- bracket highlight --><!-- TODO: Need to find a better style (if argument is only intended for known args) -->
+                <context style-ref="argument" extend-parent="false">
+                  <start>((?&lt;=(?&lt;!\\)\$\{))</start>
+                  <end>(?&gt;=\})</end>
+                  <include>
+                    <context ref="keywordsText"/>
+                    <context ref="argumentsNvidia"/>
+                    <context ref="argumentsText"/>
+                    <context ref="number"/>
+                  </include>
+                </context>
+                <!-- end: bracket highlight -->
+              </include>
+            </context>
+            <!-- non-bracket style -->
+            <context id="text-short-variable" style-ref="brackets" extend-parent="false">
+              <start>((?&lt;!\\)\$)</start>
+              <end>(\s|$)</end>
+              <include>
+                <!-- bracket highlight --><!-- TODO: Need to find a better style (if argument is only intended for known args) -->
+                <context style-ref="argument" extend-parent="false">
+                  <start>((?&lt;=(?&lt;!\\)\$))</start>
+                  <include>
+                     <context ref="keywordsText"/>
+                  </include>
+                </context>
+                <!-- end: bracket highlight -->
+              </include>
+            </context>
+            <!-- end: TextVariables -->
+          </include>
+        </context>
+        <!-- end: Text block -->
+      </include>
+    </context>
+    <!-- end: root context -->
+
+    
+    <!-- ================================== Import groups ================================== -->
+    <!-- Container for generic includes -->
+    <context id="genericContainer">
+      <include>
+        <!--<context ref="brackets"/>--> <!-- Commented out as it conflicts with the above implementation -->
+ 	      <context ref="path"/>
+        <context ref="colors"/>
+    <context ref="string"/>
+        <context ref="fonts"/>
+        <context ref="date"/>
+    <context ref="number"/>
+    <context ref="boolean"/>
+        <context ref="predefinedColors"/>
+    <context ref="argumentsConfig"/>
+      </include>
+    </context>
+    <!-- end: Generic container -->
+
+    
+    <!-- ======================== Component contexts and structure ========================= -->
     <!-- Block comment, lua syntax -->
-    <context id="block-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
+    <context id="config-block-comment" style-ref="comment" class="comment" class-disabled="no-spell-check">
       <start>--\[(=*)\[</start>
       <end>]\%{1@start}]</end>
       <include>
     <context ref="def:in-comment"/>
       </include>
     </context>
+    <!-- end: Block comment, lua syntax -->
 
     <!-- Line comment, lua syntax -->
-    <!-- <match>(?&lt;!conky\.text)(\-\-.*\n)</match> (works with /g flag) -->
-    <context id="line-comment" style-ref="comment" class-disabled="no-spell-check" end-at-line-end="true">
-    <start>--</start>
+
+    <!-- Note: this will only highlight line comments BEFORE the conky.text section -->
+    <context id="config-line-comment" style-ref="comment" class-disabled="no-spell-check">
+      <match>(\-\-.*)</match>
     </context>
+    <!-- end: Line comment, lua syntax -->
 
     <!-- File paths and URLs, starting with https://, http://, ~/ or / -->
     <context id="path" style-ref="path" class="string">
       <match>(?&lt;=\'|\ )(?:\~\/|\/|htt(?:p|ps)\:\/\/){1}[^\s\}\']*</match>
     </context>
+    <!-- end: File paths and URLs -->
 
     <!-- Brackets --> 
     <!-- Note: this will just highlight all brackets, not just those from the conky syntax -->
@@ -90,23 +167,26 @@
     </include>
     </context>
 
-    <!-- Custom colors -->
+    <!-- Custom colors (hex) -->
     <!-- Note: this will not highlight colors in bars ect -->
     <context id="colors" style-ref="argument">
       <match>(?:\'([\da-fA-F]{6})\')|(?&lt;=color)\s+([\da-fA-F]{6})\s*(?=\})</match>
     </context>
+    <!-- end: Custom colors -->
 
     <!-- Fonts -->
     <!-- Note: this will not only trigger behind font = '...' or inside ${font ...} -->
     <context id="fonts" style-ref="argument">
       <match>(?:\s+|\')(\b(?:[\w_-]\s?)*(?:\:(?:style\=)?([Mm]edium)?(?:[Bb]old|[Ii]talic))?\:(?:pixel)?size=[0-9]+)\'?</match>
     </context>
+    <!-- end: Fonts -->
 
     <!-- Date arguments -->
     <!-- BUG: needs /g + will also trigger with keywords other than time -->
     <context id="date" style-ref="argument">
       <match>\%[aAbBcCdDeDgGhHIjmMnprRStTuUVwWxXyYzZ%]{1}(?=(?:(?!\$\{).)*\})</match>
     </context>
+    <!-- end: Date arguments -->
 
     <!-- Template arguments -->
     <!-- BUG: will also trigger between [[ ]] other than from template\d{1} -->
@@ -114,16 +194,18 @@
     <context id="template" style-ref="argument">
       <match>\\[0-9]{1}(?=(?:(?!\[\[).)*\]\])</match>
     </context>
+    <!-- end: Template arguments -->
 
     <!-- Numbers -->
     <context id="number" style-ref="decimal">
       <match>(?&lt;=[\ \=]|\dx)([\+\-]{0,1}\d+)([\.\,]{1}\d+)?</match>
     </context>
+    <!-- end: Numbers -->
 
 <!-- ======================================================================================= -->
 
     <!-- Configuration keywords in the conky.config = { ... } section -->
-    <context id="keywordsConfig" style-ref="keyword">
+    <context id="keywordsConfig" style-ref="configKeyword">
     <suffix>\s*(?=\=)</suffix>
 
     <keyword>alignment</keyword>
@@ -224,10 +306,11 @@
     <keyword>use_xft</keyword>
     <keyword>xftalpha</keyword>
     </context>
+    <!-- end: Config keywords -->
 
     <!-- Variable keywords for in conky.text = [[ ]]; section -->
-    <context id="keywordsText" style-ref="attribute">
-    <prefix>(?:(?&lt;=\$\{)\ *|\$)</prefix>
+    <context id="keywordsText" style-ref="textKeyword">
+    <prefix>(?:(?&lt;=\$\{)\ *|(?&lt;=\$))</prefix>
 
     <keyword>acpiacadapter</keyword>
     <keyword>acpifan</keyword>
@@ -617,6 +700,7 @@
     <keyword>xmms2_tracknr</keyword>
     <keyword>xmms2_url</keyword>
     </context>
+    <!-- end: Variable keywords -->
 
     <!-- Boolean values -->
     <context id="boolean" style-ref="boolean">
@@ -625,6 +709,7 @@
        <keyword>yes</keyword>
        <keyword>no</keyword>
     </context>
+    <!-- end: Boolean values -->
 
     <!-- Predefined colors -->
     <context id="predefinedColors" style-ref="argument">
@@ -640,6 +725,7 @@
        <keyword>black</keyword>
        <keyword>white</keyword>
     </context>
+    <!-- end: Predefined colors -->
 
     <!-- General arguments for Conky variables in the text section -->
     <context id="argumentsText" style-ref="argument">
@@ -663,6 +749,7 @@
        <keyword>vol</keyword>
        <keyword>fan</keyword>
     </context>
+    <!-- end: Arguments for Conky variables -->
 
    <!-- own_window_type argument keywords in the config section -->
    <context id="argumentsWindowType" style-ref="argument">
@@ -675,6 +762,7 @@
     <keyword>dock</keyword>
     <keyword>panel</keyword>
    </context>
+   <!-- end: own_window_type arguments -->
 
    <!-- own_window_hints argument keywords in the config section -->
    <context id="argumentsWindowHints" style-ref="argument">
@@ -687,6 +775,7 @@
     <keyword>skip_taskbar</keyword>
     <keyword>skip_pager</keyword>
    </context>
+   <!-- end: own_window_hints arguments -->
 
    <!-- alignment argument keywords in the config section -->
    <context id="argumentsAlignment" style-ref="argument">
@@ -747,6 +836,7 @@
     <keyword>fanspeed</keyword>
     <keyword>fanlevel</keyword>
    </context>
+   <!-- end: alignment arguments -->
 
     <!-- General arguments for the Conky configuration keywords in the config section -->
    <context id="argumentsConfig" style-ref="argument">
@@ -756,6 +846,7 @@
     <keyword>fahrenheit</keyword>
     <keyword>celsius</keyword>
    </context>
+   <!-- end: General config arguments -->
 
     </definitions>
 </language>

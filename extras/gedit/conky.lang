@@ -36,65 +36,203 @@
    <!-- "root structure" this is where it all begins -->
    <context id="conkyrc" class="no-spell-check">
       <include>
+        <!-- Generic global stuff -->
+        <!-- Comments -->
+        <context ref="config-block-comment"/>
+        <context ref="config-line-comment"/>
+        <!-- end: Comments -->
+        
         <!-- The settings block -->
         <context>
-          <start>conky\.config\s*=\s*\{</start>
+          <start>((conky)\.(config)\s*=\s*(\{))</start>
           <end>\}</end>
           <include>
-            <context ref="keywordsConfig"/>
-            <context ref="argumentsConfig"/>
+            <!-- Brackets highlighter -->
+            <context sub-pattern="4" where="start" style-ref="brackets"/>
+            <context sub-pattern="0" where="end" style-ref="brackets"/>
+            <!-- end: Brackets highlighter -->
+            <!-- Keyword mark highlighter -->
+            <context sub-pattern="2" where="start" style-ref="configKeyword"/>
+            <context sub-pattern="3" where="start" style-ref="textKeyword"/>
+            <!-- end: Keyword mark highlighter -->
+            
+            <!-- Comments -->
             <context ref="config-block-comment"/>
             <context ref="config-line-comment"/>
-            <context ref="argumentsWindowType"/>
-            <context ref="argumentsWindowHints"/>
-            <context ref="argumentsAlignment"/>
-            <context ref="template"/>
-            <context ref="number"/>
-             <context ref="path"/>
-            <context ref="colors"/>
-            <context ref="string"/>
-            <context ref="fonts"/>
-            <context ref="date"/>
-            <context ref="boolean"/>
-            <context ref="predefinedColors"/>
+            <!-- end: Comments -->
+            
+            <!-- key=val pair -->
+            <context extend-parent="true">
+              <!-- ([A-Za-z0-9_]+\s*=\s*([0-9]+(\.[0-9]+)?|'.*'|true|false|TRUE|FALSE)(,?\s*)$) -->
+              <start>(?=[A-Za-z0-9_]+\s*=)</start>
+              <end>,|$</end>
+              <include>
+                <!-- key -->
+                <context extend-parent="false" once-only="true" end-at-line-end="true">
+                  <start>(?&lt;=^|\s)</start>
+                  <end>(?=\s|=)</end>
+                  <include>
+                    <context ref="keywordsConfig"/>
+                  </include>
+                </context>
+                <!-- end: key -->
+                <!-- value -->
+                <context extend-parent="false" once-only="true" end-at-line-end="true">
+                  <start>(\s*(=)\s*)</start>
+                  <end>(?=,|\s)</end>
+                  <include>
+                    <!-- Equals highlight -->
+                    <context sub-pattern="2" where="start" style-ref="brackets"/>
+                    <!-- end: Equals highlight -->
+                    
+                    <!-- String value -->
+                    <context id="configString" extend-parent="true" once-only="true" end-at-line-end="true" class="string">
+                      <start>('|")</start>
+                      <end>((?&lt;!\\)\%{0@start})</end>
+                      <include>
+                        <!-- Quote mark highlighter -->
+                        <context sub-pattern="0" where="start" style-ref="brackets"/>
+                        <context sub-pattern="0" where="end" style-ref="brackets"/>
+                        <!-- end: Quote mark highlighter -->
+                        
+                        <!-- Known arguments -->
+                        <context ref="argumentsConfig"/>
+                        <context ref="argumentsWindowType"/>
+                        <context ref="argumentsWindowHints"/>
+                        <context ref="argumentsAlignment"/>
+                        <context ref="predefinedColors"/>
+                        <!-- end: Known arguments -->
+                        
+                        <!-- Known patterns -->
+                        <!-- TODO: separate normal string escapes from literal string escapes -->
+                        <!--       involves moving these includes into a generic container -->
+                        <context ref="escape"/>
+                        <context ref="path"/>
+                        <context ref="colors"/>
+                        <context ref="fonts"/>
+                        <context ref="date"/>
+                        <!-- end: Known patterns -->
+                        
+                      </include>
+                    </context>
+                    <!-- end: String value -->
+                    <!-- Literal string -->
+                    <!-- BUG: \N escapes not highlighted when inside a ${ ... } variable -->
+                    <context id="configLitString" extend-parent="true" once-only="true">
+                      <start>\[\[</start>
+                      <end>(\]\])</end>
+                      <include>
+                        <!-- Quote mark highlighter -->
+                        <context sub-pattern="0" where="start" style-ref="brackets"/>
+                        <context sub-pattern="0" where="end" style-ref="brackets"/>
+                        <!-- end: Quote mark highlighter -->
+                        
+                        <!-- Literal Sub-String -->
+                        <!-- We use this to stop premature end of parent -->
+                        <context extend-parent="true">
+                          <start>\[\[</start>
+                          <end>(\]\])</end>
+                          <include>
+                            <!-- Reccursive -->
+                            <context ref="configLitString:*"/>
+                            <!-- end: Reccursion -->
+                          </include>
+                        </context>
+                        <!-- end: Literal Sub-String -->
+                        
+                        <!-- Copy everything from single line string -->
+                        <context ref="configString:*"/>
+                        
+                        <!-- Since this is a literal, we should parse the same stuff as in the text block -->
+                        <context ref="conkyText:*"/>
+                      </include>
+                    </context>
+                    <!-- end: Literal string -->
+                    
+                    <context ref="number"/>
+                    <context ref="boolean"/>
+                  </include>
+                </context>
+                <!-- end: value -->
+              </include>
+            </context>
+            <!-- end: key=val -->
           </include>
         </context>
         <!-- end: settings block -->
 
         <!-- The text block -->
-        <context>
-          <start>conky\.text\s*=\s*\[\[</start>
+        <context id="conkyText">
+          <start>((conky)\.(text)\s*=\s*(\[\[))</start>
           <end>\]\]</end>
           <include>
-            <!-- Text Variable brackets highlighter -->
-            <!-- Highlights unescaped `$`, `${` and `}` within `conky.text` -->
-            <context style-ref="brackets" extend-parent="false">
-              <match>(((?&lt;!\\)(\$\{|\}|\$(?!\{)(?=[a-z]))))</match>
+            <!-- Brackets highlighter -->
+            <context sub-pattern="4" where="start" style-ref="brackets"/>
+            <context sub-pattern="0" where="end" style-ref="brackets"/>
+            <!-- end: Brackets highlighter -->
+            <!-- Keyword mark highlighter -->
+            <context sub-pattern="2" where="start" style-ref="configKeyword"/>
+            <context sub-pattern="3" where="start" style-ref="textKeyword"/>
+            <!-- end: Keyword mark highlighter -->
+            
+            <!-- Literal Sub-String -->
+            <!-- We use this to stop premature end of parent -->
+            <context extend-parent="true">
+              <start>\[\[</start>
+              <end>\]\]</end>
+              <include>
+                <!-- Reccursive -->
+                <context ref="conkyText:*"/>
+                <!-- end: Reccursion -->
+              </include>
             </context>
-            <!-- end: Text Variable brackets -->
-
+            <!-- end: Literal Sub-String -->
+            
             <!-- TextVariables -->
             <!-- These select the text variable's content (e.g. `$content` or `${content and more content}`) -->
             <!-- You could style generic variable text by adding a `style-ref` here -->
 
             <!-- Bracket style -->
-            <context extend-parent="false">
-              <start>(?&lt;=(?&lt;!\\)\$\{)</start>
-              <end>(?=(?&lt;!\\)\})</end>
+            <!-- set style-ref and style-inside="true" if you want to style the contents -->
+            <context id="bracketTextVar" extend-parent="true">
+              <start>((?&lt;!\\)\$\{)</start>
+              <end>((?&lt;!\\)\})</end>
               <include>
-                <context ref="keywordsText"/>
-                <context ref="argumentsNvidia"/>
-                <context ref="argumentsText"/>
-                <context ref="number"/>
+                  <!-- Brackets highlighter -->
+                  <context sub-pattern="0" where="start" style-ref="brackets"/>
+                  <context sub-pattern="0" where="end" style-ref="brackets"/>
+                  <!-- end: Brackets highlighter -->
+                  
+                  <!-- Make this reccursive -->
+                  <context ref="bracketTextVar"/>
+                  <!-- end: Reccursion -->
+                  
+                  <!-- Known variables/keywords -->
+                  <context ref="keywordsText"/>
+                  
+                  <!-- Known arguments -->
+                  <context ref="argumentsNvidia"/>
+                  <context ref="argumentsText"/>
+                  <context ref="predefinedColors"/>
+                  <!-- end: Known arguments -->
+                  
+                  <!-- Known patterns -->
+                  <context ref="number"/>
+                  <context ref="textString"/>
+                  <!-- end: Known patterns -->
               </include>
             </context>
 
             <!-- non-bracket style -->
             <context extend-parent="false">
-              <start>((?&lt;=(?&lt;!\\)\$)(?!\{))</start>
-              <end>(\s|$)</end>
+              <start>(((?&lt;!\\)\$)(?!\{))</start>
+              <end>((?=[^A-Za-z0-9_])|$)</end>
               <include>
-                 <context ref="keywordsText"/>
+                  <!-- Dollar highlighter -->
+                  <context sub-pattern="0" where="start" style-ref="brackets"/>
+                  <!-- end: Dollar highlighter -->
+                  
+                  <context ref="keywordsText"/>
               </include>
             </context>
             <!-- end: TextVariables -->
@@ -141,15 +279,19 @@
     <!-- end: File paths and URLs -->
 
     <!-- String -->
-    <context id="string" end-at-line-end="true" style-ref="path">
+    <context id="textString" end-at-line-end="true" style-ref="path">
     <start>"</start>
     <end>"</end>
     <include>
-        <context id="escape" style-ref="path">
-            <match>\\.</match>
-        </context>
+      <context ref="escape"/>
     </include>
     </context>
+    
+    <!-- Escaped char -->
+    <context id="escape" style-ref="argument">
+        <match>\\.</match>
+    </context>
+    <!-- end: Escaped char -->
 
     <!-- Custom colors (hex) -->
     <!-- Note: this will not highlight colors in bars ect -->
@@ -172,13 +314,6 @@
     </context>
     <!-- end: Date arguments -->
 
-    <!-- Template arguments -->
-    <!-- BUG: will also trigger between [[ ]] other than from template\d{1} -->
-    <!-- BUG: this will only work for SINGLE line templates (need /g flag) -->
-    <context id="template" style-ref="argument">
-      <match>\\[0-9]{1}(?=(?:(?!\[\[).)*\]\])</match>
-    </context>
-    <!-- end: Template arguments -->
 
     <!-- Numbers -->
     <context id="number" style-ref="decimal" extend-parent="false">
@@ -697,9 +832,6 @@
 
     <!-- Predefined colors -->
     <context id="predefinedColors" style-ref="argument">
-       <prefix>(?&lt;=\ |\'|\})</prefix>
-       <suffix>(?=\ |\'|\})</suffix>
-
        <keyword>red</keyword>
        <keyword>green</keyword>
        <keyword>yellow</keyword>
@@ -737,9 +869,6 @@
 
    <!-- own_window_type argument keywords in the config section -->
    <context id="argumentsWindowType" style-ref="argument">
-    <prefix>\'</prefix>
-    <suffix>\'</suffix>
-
     <keyword>normal</keyword>
     <keyword>override</keyword>
     <keyword>desktop</keyword>
@@ -750,8 +879,6 @@
 
    <!-- own_window_hints argument keywords in the config section -->
    <context id="argumentsWindowHints" style-ref="argument">
-    <prefix>(?:\ *|\'|\,)</prefix>
-
     <keyword>undecorated</keyword>
     <keyword>below</keyword>
     <keyword>above</keyword>
@@ -763,9 +890,6 @@
 
    <!-- alignment argument keywords in the config section -->
    <context id="argumentsAlignment" style-ref="argument">
-    <prefix>\'</prefix>
-    <suffix>\'</suffix>
-
     <keyword>none</keyword>
     <keyword>top</keyword>
     <keyword>top_left</keyword>
@@ -824,9 +948,6 @@
 
     <!-- General arguments for the Conky configuration keywords in the config section -->
    <context id="argumentsConfig" style-ref="argument">
-    <prefix>\'</prefix>
-    <suffix>\'</suffix>
-
     <keyword>fahrenheit</keyword>
     <keyword>celsius</keyword>
    </context>

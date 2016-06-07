@@ -125,13 +125,14 @@
     
     <!-- Line comment, conky text syntax -->
     <!-- Note: this will only highlight line comments **inside** the conky.text section -->
-    <context id="lit-comment" style-ref="comment" class-disabled="no-spell-check">
+    <context id="text-comment" style-ref="comment" class-disabled="no-spell-check">
       <start>#</start><end>$</end>
     </context>
     <!-- end: Line comment, conky syntax-->
 
     <!-- String -->
-    <context id="lua-string" end-at-line-end="true" class="string">
+    <context id="lua-string"  style-ref="argument" style-inside="true"
+             end-at-line-end="true" class="string">
       <start>('|")</start><end>\%{0@start}</end>
       <include>
         <!-- Quote mark highlighter -->
@@ -139,13 +140,12 @@
         <context sub-pattern="0" where="end" style-ref="brackets"/>
         <!-- end: Quote mark highlighter -->
         
-        <context ref="predefined-colors"/>
-        
         <!-- Known patterns -->
         <!-- Escaped Char (also prevents the context ending prematurely) -->
-        <context ref="escape"/>
+        <context ref="lua-escape"/>
         <context ref="path"/>
         <context ref="hex-colors"/>
+        <context ref="predefined-colors"/>
         <!-- end: Known patterns -->
         
       </include>
@@ -170,12 +170,11 @@
         </context>
         <!-- end: Literal Sub-String -->
         
-        <!-- Copy everything from single line string -->
-        <context ref="lua-string:*"/>
-        
         <!-- Stuff specific to literal strings (e.g. templates and conky.text) -->
-        <context ref="endline-escape"/>
-        <context ref="lit-comment"/>
+        <!-- TODO: Find a clean way to separate template and text lit-strings -->
+        <context ref="text-escape"/>
+        <context ref="template-escape"/>
+        <context ref="text-comment"/>
         <context ref="bracket-var"/>
         <context ref="text-var"/>
       </include>
@@ -183,14 +182,21 @@
     <!-- end: Literal string -->
     
     <!-- Escaped char -->
-    <!-- TODO: separate normal string escapes from literal string escapes -->
-    <context id="escape" style-ref="escaped-char">
-        <match>\\.</match>
+    
+    <!-- conky.text escapes -->
+    <context id="text-escape" style-ref="escaped-char">
+        <!-- NOTE: Conky doesn't currently escape double backslash -->
+        <match>\\(?:#|$)</match>
     </context>
     
-    <!-- End of line/newline escape -->
-    <context id="endline-escape" style-ref="escaped-char">
-        <match>\\$</match>
+    <!-- template definition escapes -->
+    <context id="template-escape" style-ref="escaped-char">
+        <match>\\[n\\ 0-9]</match>
+    </context>
+    
+    <!-- lua string escapes -->
+    <context id="lua-escape" style-ref="escaped-char">
+        <match>\\[abfnrtv\\"'\[\]]</match>
     </context>
     <!-- end: Escaped char -->
     
@@ -238,7 +244,7 @@
     <!-- ======================================================================================= -->
 
     <!-- key=val pair -->
-    <context id="config-option" style-ref="argument" style-inside="true">
+    <context id="config-option">
       <start>[A-Za-z0-9_]+</start>
       <!-- ended by value -->
       <include>
@@ -291,15 +297,12 @@
           <!-- Variable/keyword highlighter -->
           <context sub-pattern="2" where="start" style-ref="text-keyword"/>
           
-          <!-- Special arguments -->
-          <!-- Arguments we really want to have a different colour -->
-          <!-- end: Special arguments -->
-          
           <!-- Special patterns -->
-          <!-- Escaped Char also prevents the context ending prematurely -->
-          <context ref="escape"/>
           <context ref="number"/>
           <context ref="boolean"/>
+          <context ref="path"/>
+          <context ref="hex-colors"/>
+          <context ref="predefined-colors"/>
           <!-- end: Special patterns -->
           
           <!-- Inherit from lit-String -->

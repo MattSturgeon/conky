@@ -14,10 +14,10 @@
   </metadata>
 
   <styles>
-    <style id="configKeyword" _name="Config keywords"     map-to="def:keyword"/>
-    <style id="textKeyword"   _name="Text keywords"       map-to="def:type"/>
+    <style id="config-keyword" _name="Config keywords"     map-to="def:keyword"/>
+    <style id="text-keyword"   _name="Text keywords"       map-to="def:type"/>
     <style id="comment" _name="Comment"         map-to="def:comment"/>
-    <style id="escapedChar" _name="Escaped Character" map-to="def:special-char"/>
+    <style id="escaped-char" _name="Escaped Character" map-to="def:special-char"/>
     <style id="path"    _name="Paths and URLs"      map-to="def:string"/>
     <style id="boolean" _name="Boolean"         map-to="def:boolean"/>
     <style id="argument"    _name="Arguments"       map-to="def:preprocessor"/>
@@ -48,8 +48,8 @@
           <end>\}</end>
           <include>
             <!-- Keyword mark highlighter -->
-            <context sub-pattern="1" where="start" style-ref="configKeyword"/>
-            <context sub-pattern="2" where="start" style-ref="textKeyword"/>
+            <context sub-pattern="1" where="start" style-ref="config-keyword"/>
+            <context sub-pattern="2" where="start" style-ref="text-keyword"/>
             <!-- end: Keyword mark highlighter -->
             <!-- Equals highlighter -->
             <context sub-pattern="3" where="start" style-ref="brackets"/>
@@ -65,20 +65,20 @@
             <!-- end: Comments -->
             
             <!-- key=val pair -->
-            <context ref="configKeyVal"/>
+            <context ref="config-option"/>
             <!-- end: key=val -->
           </include>
         </context>
         <!-- end: settings block -->
 
         <!-- The text block -->
-        <context id="conkyText">
+        <context id="conky-text">
           <start>(?:(conky)\.(text)(?:\s|\n)*(=)(?:\s|\n)*)</start>
           <end>(?=.|$)</end><!-- End at anything as we only have one child -->
           <include>
               <!-- Keyword mark highlighter -->
-              <context sub-pattern="1" where="start" style-ref="configKeyword"/>
-              <context sub-pattern="2" where="start" style-ref="textKeyword"/>
+              <context sub-pattern="1" where="start" style-ref="config-keyword"/>
+              <context sub-pattern="2" where="start" style-ref="text-keyword"/>
               <!-- end: Keyword mark highlighter -->
               <!-- Equals highlighter -->
               <context sub-pattern="3" where="start" style-ref="brackets"/>
@@ -87,7 +87,7 @@
             <!-- Literal Sub-String -->
             
             <!-- This is just a literal string, really -->
-            <context ref="litString"/>
+            <context ref="lua-lit-string"/>
           </include>
         </context>
         <!-- end: Text block -->
@@ -98,7 +98,7 @@
 
     <!-- ================================== Import groups ================================== -->
     <!-- Container for generic includes -->
-    <!--<context id="genericContainer">
+    <!--<context id="generic-container">
       <include>
       </include>
     </context>-->
@@ -125,13 +125,13 @@
     
     <!-- Line comment, conky text syntax -->
     <!-- Note: this will only highlight line comments **inside** the conky.text section -->
-    <context id="litComment" style-ref="comment" class-disabled="no-spell-check">
+    <context id="lit-comment" style-ref="comment" class-disabled="no-spell-check">
       <start>#</start><end>$</end>
     </context>
     <!-- end: Line comment, conky syntax-->
 
     <!-- String -->
-    <context id="string" end-at-line-end="true" class="string">
+    <context id="lua-string" end-at-line-end="true" class="string">
       <start>('|")</start><end>\%{0@start}</end>
       <include>
         <!-- Quote mark highlighter -->
@@ -139,14 +139,13 @@
         <context sub-pattern="0" where="end" style-ref="brackets"/>
         <!-- end: Quote mark highlighter -->
         
-        <context ref="predefinedColors"/>
+        <context ref="predefined-colors"/>
         
         <!-- Known patterns -->
         <!-- Escaped Char (also prevents the context ending prematurely) -->
         <context ref="escape"/>
         <context ref="path"/>
-        <context ref="colors"/>
-        <context ref="date"/>
+        <context ref="hex-colors"/>
         <!-- end: Known patterns -->
         
       </include>
@@ -154,7 +153,7 @@
     <!-- end: String value -->
     
     <!-- Literal string -->
-    <context id="litString" once-only="true">
+    <context id="lua-lit-string" once-only="true">
       <start>\[\[</start><end>\]\]</end>
       <include>
         <!-- Quote mark highlighter -->
@@ -167,30 +166,30 @@
         <context>
           <start>\[\[</start><end>\]\]</end>
           <!-- Reccursive -->
-          <include><context ref="litString:*"/></include>
+          <include><context ref="lua-lit-string:*"/></include>
         </context>
         <!-- end: Literal Sub-String -->
         
         <!-- Copy everything from single line string -->
-        <context ref="string:*"/>
+        <context ref="lua-string:*"/>
         
         <!-- Stuff specific to literal strings (e.g. templates and conky.text) -->
-        <context ref="newlineEscape"/>
-        <context ref="litComment"/>
-        <context ref="bracketTextVar"/>
-        <context ref="textVar"/>
+        <context ref="endline-escape"/>
+        <context ref="lit-comment"/>
+        <context ref="bracket-var"/>
+        <context ref="text-var"/>
       </include>
     </context>
     <!-- end: Literal string -->
     
     <!-- Escaped char -->
     <!-- TODO: separate normal string escapes from literal string escapes -->
-    <context id="escape" style-ref="escapedChar">
+    <context id="escape" style-ref="escaped-char">
         <match>\\.</match>
     </context>
     
-    <!-- New line escape -->
-    <context id="newlineEscape" style-ref="escapedChar">
+    <!-- End of line/newline escape -->
+    <context id="endline-escape" style-ref="escaped-char">
         <match>\\$</match>
     </context>
     <!-- end: Escaped char -->
@@ -202,13 +201,14 @@
     <!-- end: File paths and URLs -->
     
     <!-- Custom colors (hex) -->
-    <context id="colors" style-ref="decimal">
+    <context id="hex-colors" style-ref="decimal">
       <match>(?:[\da-fA-F]{6})</match>
     </context>
     <!-- end: Custom colors -->
 
     <!-- Predefined colors -->
-    <context id="predefinedColors" style-ref="decimal">
+    <!-- Colors parsed by `XParsecolor()` (see /usr/share/X11/rgb.txt (or possibly /usr/lib)) -->
+    <context id="predefined-colors" style-ref="decimal">
        <keyword>red</keyword>
        <keyword>green</keyword>
        <keyword>yellow</keyword>
@@ -219,14 +219,6 @@
        <keyword>white</keyword>
     </context>
     <!-- end: Predefined colors -->
-
-    <!-- Date arguments -->
-    <!-- BUG: will also trigger with keywords other than time? -->
-    <context id="date" style-ref="decimal">
-      <match>\%[aAbBcCdDeDgGhHIjmMnprRStTuUVwWxXyYzZ%]{1}</match>
-    </context>
-    <!-- end: Date arguments -->
-
 
     <!-- Numbers -->
     <context id="number" style-ref="decimal">
@@ -246,12 +238,12 @@
     <!-- ======================================================================================= -->
 
     <!-- key=val pair -->
-    <context id="configKeyVal" style-ref="argument" style-inside="true">
+    <context id="config-option" style-ref="argument" style-inside="true">
       <start>[A-Za-z0-9_]+</start>
       <!-- ended by value -->
       <include>
         <!-- Keyword highlight -->
-        <context sub-pattern="0" where="start" style-ref="configKeyword"/>
+        <context sub-pattern="0" where="start" style-ref="config-keyword"/>
         <!-- end: Keyword highlight -->
         
         <!-- value -->
@@ -263,8 +255,8 @@
             <!-- end: Equals highlight -->
             
             <!-- Value types -->
-            <context ref="string"/>
-            <context ref="litString"/>
+            <context ref="lua-string"/>
+            <context ref="lua-lit-string"/>
             <context ref="number"/>
             <context ref="boolean"/>
             <!-- end: Value types -->
@@ -287,7 +279,7 @@
 
     <!-- TextVariables -->
     <!-- Bracket style -->
-    <context id="bracketTextVar" style-ref="argument" style-inside="true">
+    <context id="bracket-var" style-ref="argument" style-inside="true">
       <start>(?:(\$\{)(?:\s|\n|$)*([a-z][a-z0-9_]*))</start>
       <end>\}</end>
       <include>
@@ -297,7 +289,7 @@
           <!-- end: Brackets highlighter -->
           
           <!-- Variable/keyword highlighter -->
-          <context sub-pattern="2" where="start" style-ref="textKeyword"/>
+          <context sub-pattern="2" where="start" style-ref="text-keyword"/>
           
           <!-- Special arguments -->
           <!-- Arguments we really want to have a different colour -->
@@ -310,13 +302,13 @@
           <context ref="boolean"/>
           <!-- end: Special patterns -->
           
-          <!-- Inherit from litString -->
-          <context ref="litString:*"/>
+          <!-- Inherit from lit-String -->
+          <context ref="lua-lit-string:*"/>
       </include>
     </context>
 
     <!-- non-bracket style -->
-    <context id="textVar" style-ref="textKeyword" style-inside="true">
+    <context id="text-var" style-ref="text-keyword" style-inside="true">
       <start>(?:(\$)(?!\{))</start>
       <end>(?:(?=[^A-Za-z0-9_])|$)</end>
       <include>
